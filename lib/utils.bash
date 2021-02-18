@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for websocat.
 GH_REPO="https://github.com/vi/websocat"
 
 fail() {
@@ -12,7 +11,6 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if websocat is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
   curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
 fi
@@ -25,25 +23,31 @@ sort_versions() {
 list_github_tags() {
   git ls-remote --tags --refs "$GH_REPO" |
     grep -o 'refs/tags/.*' | cut -d/ -f3- |
-    sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
+    sed -e '/^v[[:digit:]].*/!d' -e 's/^v//'
 }
 
 list_all_versions() {
-  # TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-  # Change this function if websocat has other means of determining installable versions.
   list_github_tags
 }
 
 download_release() {
-  local version filename url
+  local version filename platform architecture extension suffix url
   version="$1"
   filename="$2"
+  platform="$3"
+  architecture="$4"
+  extension="$5"
 
-  # TODO: Adapt the release URL convention for websocat
-  url="$GH_REPO/archive/v${version}.tar.gz"
+  case "${platform}" in
+    mac) suffix="${platform}" ;;
+    linux | freebsd) suffix="${architecture}-${platform}" ;;
+    win) suffix="${platform}${architecture}" ;;
+    *) fail "Unsupported platform: ${platform}" ;;
+  esac
+  url="$GH_REPO/releases/download/v${version}/websocat_${suffix}${extension}"
 
   echo "* Downloading websocat release $version..."
-  curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+  curl "${curl_opts[@]}" -o "${filename}" -C - "$url" || fail "Could not download $url"
 }
 
 install_version() {
@@ -55,18 +59,35 @@ install_version() {
     fail "asdf-websocat supports release installs only"
   fi
 
-  # TODO: Adapt this to proper extension and adapt extracting strategy.
-  local release_file="$install_path/websocat-$version.tar.gz"
-  (
-    mkdir -p "$install_path"
-    download_release "$version" "$release_file"
-    tar -xzf "$release_file" -C "$install_path" --strip-components=1 || fail "Could not extract $release_file"
-    rm "$release_file"
+  local platform extension
+  extension=
+  case "$OSTYPE" in
+    darwin*) platform="mac" ;;
+    FreeBSD*) platform="freebsd" ;;
+    linux*) platform="linux" ;;
+    msys*)
+      platform=win
+      extension=.exe
+      ;;
+    *) fail "Unsupported platform: ${OSTYPE}" ;;
+  esac
 
-    # TODO: Asert websocat executable exists.
-    local tool_cmd
-    tool_cmd="$(echo "websocat --version" | cut -d' ' -f1)"
-    test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
+  local architecture
+  case "${HOSTTYPE}" in
+    aarch64* | arm*) architecture="arm" ;;
+    i686* | i386*) architecture="i386" ;;
+    x86_64*) architecture="amd64" ;;
+    mipsel*) architecture="mipsel" ;;
+    32*) architecture="32" ;;
+    64*) architecture="64" ;;
+    *) fail "Unsupported architecture: ${HOSTTYPE}" ;;
+  esac
+
+  local release_file="$install_path/bin/websocat${extension}"
+  (
+    mkdir -p "$install_path/bin"
+    download_release "$version" "$release_file" "$platform" "$architecture" "$extension"
+    chmod +x "$release_file"
 
     echo "websocat $version installation was successful!"
   ) || (
