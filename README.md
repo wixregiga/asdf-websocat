@@ -26,7 +26,7 @@ Plugin:
 ```shell
 asdf plugin add websocat
 # or
-asdf plugin add https://github.com/bdellegrazie/asdf-websocat.git
+asdf plugin add https://github.com/wixregiga/asdf-websocat.git
 ```
 
 websocat:
