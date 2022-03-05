@@ -30,6 +30,14 @@ list_all_versions() {
   list_github_tags
 }
 
+function simple_gte() {
+  local first_version second_version
+  first_version=$(echo "${1//v/}" | awk -F'-' '{print $1}' | tr -d '.')
+  if (( first_version >= 190 )); then
+    echo 1
+  fi
+}
+
 download_release() {
   local version filename platform architecture extension suffix url
   version="$1"
@@ -40,7 +48,19 @@ download_release() {
 
   case "${platform}" in
     mac) suffix="${platform}" ;;
-    linux | freebsd) suffix="${architecture}-${platform}" ;;
+    linux)
+      if [[ simple_gte "${version}" ]]; then 
+        suffix="${platform}${architecture//amd/}"; #1
+      else 
+        suffix="${architecture}-${platform}"
+      fi
+      ;;
+    freebsd)
+      if [[ simple_gte "${version}" ]]; then
+        suffix="${platform}" #1
+      else
+        suffix="${architecture}-${platform}"
+      fi
     win) suffix="${platform}${architecture}" ;;
     *) fail "Unsupported platform: ${platform}" ;;
   esac
