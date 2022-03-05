@@ -49,18 +49,19 @@ download_release() {
   case "${platform}" in
     mac) suffix="${platform}" ;;
     linux)
-      if [[ simple_gte "${version}" ]]; then 
-        suffix="${platform}${architecture//amd/}"; #1
-      else 
+      if simple_gte "${version}"; then
+        suffix="${platform}${architecture//amd/}" #1
+      else
         suffix="${architecture}-${platform}"
       fi
-      ;;
+    ;;
     freebsd)
-      if [[ simple_gte "${version}" ]]; then
+      if simple_gte "${version}"; then
         suffix="${platform}" #1
       else
         suffix="${architecture}-${platform}"
       fi
+      ;;
     win) suffix="${platform}${architecture}" ;;
     *) fail "Unsupported platform: ${platform}" ;;
   esac
