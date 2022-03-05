@@ -24,9 +24,11 @@
 Plugin:
 
 ```shell
+# Installs Community Version
+# equivalent to `asdf plugin add websocat https://github.com/bdellegrazie/asdf-websocat`
 asdf plugin add websocat
 # or
-asdf plugin add https://github.com/wixregiga/asdf-websocat.git
+asdf plugin add websocat https://github.com/wixregiga/asdf-websocat.git
 ```
 
 websocat:
